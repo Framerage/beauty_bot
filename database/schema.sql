@@ -1,0 +1,32 @@
+CREATE TABLE IF NOT EXISTS bookings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT,
+  name TEXT,
+  phone TEXT,
+  service TEXT,
+  date TEXT,
+  time TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(date,time)
+);
+CREATE TABLE IF NOT EXISTS portfolio (
+  id INTEGER PRIMARY KEY,
+  portfolio_description TEXT
+);
+CREATE TABLE IF NOT EXISTS slots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date TEXT,
+  time TEXT,
+  booked INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS services (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT,
+  price TEXT
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
