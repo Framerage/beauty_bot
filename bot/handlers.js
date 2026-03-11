@@ -174,7 +174,7 @@ function registerHandlers(bot) {
   });
 
   bot.on("text", async (ctx) => {
-    console.log(ctx.message.text, " text insided");
+    console.log(ctx.message.text, " text insided", ctx.from.id);
     //portfolio logic
     if (adminState.get("step") === "WAIT_PORTFOLIO") {
       const oldPortfolio = await getPortfolio();
@@ -213,23 +213,23 @@ function registerHandlers(bot) {
 
     if (state.step === "WAIT_PHONE") {
       state.data.phone = ctx.message.text;
-      try {
-        await createBooking({
-          ...state.data,
-          user_id: ctx.from.id,
-        });
+      // try {
+      await createBooking({
+        ...state.data,
+        user_id: ctx.from.id,
+      });
 
-        ctx.reply(
-          `Запись подтверждена
+      ctx.reply(
+        `Запись подтверждена
 
 ${state.data.date}
 ${state.data.time}`,
-        );
+      );
 
-        await ctx.telegram.sendMessage(
-          ADMIN_ID,
+      await ctx.telegram.sendMessage(
+        ADMIN_ID,
 
-          `<b>Новая запись</b>
+        `<b>Новая запись</b>
 
 👤 ${state.data.name}
 📞 ${state.data.phone}
@@ -237,13 +237,14 @@ ${state.data.time}`,
 📅 ${state.data.date}
 ⏰ ${state.data.time}`,
 
-          { parse_mode: "HTML" },
-        );
+        { parse_mode: "HTML" },
+      );
 
-        clearState(ctx.from.id);
-      } catch (e) {
-        ctx.reply("Этот слот только что заняли. Выберите другой.");
-      }
+      clearState(ctx.from.id);
+      // }
+      // catch (e) {
+      //   ctx.reply("Этот слот только что заняли. Выберите другой.");
+      // }
     }
   });
 
