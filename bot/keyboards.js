@@ -1,29 +1,45 @@
-const { generateSlots } = require("../dbHelpers/slotGenerator");
+const { generateSlots } = require('../dbHelpers/slotGenerator')
 
-function timeKeyboard(date) {
-  const times = generateSlots();
+// function timeKeyboard(date) {
+//   const times = generateSlots();
 
-  const rows = [];
+//   const rows = [];
 
-  let row = [];
+//   let row = [];
 
-  times.forEach((t) => {
-    row.push({
-      text: t,
+//   times.forEach((t) => {
+//     row.push({
+//       text: t,
 
-      callback_data: `slot_${date}_${t}`,
-    });
+//       callback_data: `slot_${date}_${t}`,
+//     });
 
-    if (row.length === 3) {
-      rows.push(row);
+//     if (row.length === 3) {
+//       rows.push(row);
 
-      row = [];
-    }
-  });
+//       row = [];
+//     }
+//   });
 
-  if (row.length) rows.push(row);
+//   if (row.length) rows.push(row);
 
-  return rows;
+//   return rows;
+// }
+
+const timeKeyboard = (date, chunkSize = 3) => {
+  return generateSlots()
+    .map((time) => {
+      console.log(time, ' cur time ')
+      return {
+        text: time,
+        callback_data: `slot_${date}_${time}`,
+      }
+    })
+    .reduce((rows, btn, i) => {
+      if (i % chunkSize === 0) rows.push([])
+      rows[rows.length - 1].push(btn)
+      return rows
+    }, [])
 }
 
-module.exports = { timeKeyboard };
+module.exports = { timeKeyboard }
