@@ -9,32 +9,32 @@
 
 // start();
 
-const { Telegraf } = require("telegraf");
+const { Telegraf } = require('telegraf')
 
-const { BOT_TOKEN } = require("./config/config");
+const { BOT_TOKEN } = require('./config/config')
 
-const { initDB } = require("./database/db");
+const { initDB } = require('./database/db')
 
-const { registerHandlers } = require("./bot/handlers");
-const { registerAdmin } = require("./bot/admin");
+const { registerHandlers } = require('./bot/handlers')
+const { registerAdmin } = require('./bot/admin')
 
-const bot = new Telegraf(BOT_TOKEN);
+const bot = new Telegraf(BOT_TOKEN || '8690159453:AAFyVSrvlc2cOKCI3ug6Z99akPZ6pMPhs5Q')
 
 // bot.command({
 //   command: "start",
 //   description: "Запуск бота",
 // });
-initDB();
+initDB()
 
-registerHandlers(bot);
+registerHandlers(bot)
 // registerAdmin(bot);
 
 bot.telegram.setMyCommands([
-  { command: "start", description: "Запуск бота" },
-  { command: "admin", description: "Админская панель" },
-]);
+  { command: 'start', description: 'Запуск бота' },
+  { command: 'admin', description: 'Админская панель' },
+])
 
-bot.launch();
+bot.launch()
 
-process.once("SIGINT", () => bot.stop("SIGINT"));
-process.once("SIGTERM", () => bot.stop("SIGTERM"));
+process.once('SIGINT', () => bot.stop('SIGINT'))
+process.once('SIGTERM', () => bot.stop('SIGTERM'))

@@ -73,10 +73,16 @@ const { timeKeyboard } = require('./keyboards')
 const { isValidRUPhone } = require('./helpers')
 const { setState, getState, clearState } = require('../utils/fsm')
 
-const { createBooking, cancelBooking, getBookingByUser } = require('../dbHelpers/booking')
-
+const {
+  createBooking,
+  cancelBooking,
+  getBookingByUser,
+  updateBooking,
+} = require('../dbHelpers/booking')
+//TODO: use update booking anywhere
 const { getPortfolio, editPortfolio } = require('../dbHelpers/portfolio')
-const { ADMIN_ID } = require('../config/config')
+const { ADMIN_ID: ENV_ADMIN_ID } = require('../config/config')
+const ADMIN_ID = ENV_ADMIN_ID || 937401113
 const { getLog, dumpDatabase } = require('../utils/logger')
 const adminState = new Map()
 
@@ -105,6 +111,7 @@ const adminKeyboard = [
 ]
 function registerHandlers(bot) {
   bot.start((ctx) => {
+    //TODO: create admin panel
     const currentKeyboard =
       // ctx.from.id === ADMIN_ID ? adminKeyboard :
       clientKeyboard
@@ -121,22 +128,30 @@ function registerHandlers(bot) {
   bot.action('booking', async (ctx) => {
     const existing = await getBookingByUser(ctx.from.id)
 
-    // if (existing) {
-    //   ctx.reply(
-    //     `У вас уже есть запись
+    if (existing) {
+      setState(ctx.from.id, {
+        existing: true,
+        existData: { ...existing },
+        hasAnyChanges: true,
+        // step: 'WAIT_NAME',
 
-    //     📅 ${existing.date}
-    //     ⏰ ${existing.time}
+        // data: { date, time },
+      })
+      // ctx.reply(
+      //   `У вас уже есть запись
 
-    //     Сначала отмените её`,
-    //   )
+      //   📅 ${existing.date}
+      //   ⏰ ${existing.time}
 
-    //   clearState(ctx.from.id)
+      //   Сначала отмените её`,
+      // )
 
-    //   return
-    // }
+      // clearState(ctx.from.id)
+
+      // return
+    }
     ctx.reply(
-      'Выберите дату',
+      !!existing ? 'Выберите новую дату' : 'Выберите дату',
 
       Markup.inlineKeyboard(buildCalendar()),
     )
@@ -145,14 +160,10 @@ function registerHandlers(bot) {
   bot.action(/date_(.+)/, async (ctx) => {
     const date = ctx.match[1]
 
-    const notes = await getBookingByUser(ctx.from.id)
-
-    console.log(notes, ' note user ')
     ctx.reply(
       `Дата ${date}
 
-Выберите время`,
-      //TODO: добавить загрузку из бд существующих записей и передавать массив имеющихся времен
+      Выберите время`,
       Markup.inlineKeyboard(timeKeyboard(date)),
     )
   })
@@ -162,13 +173,27 @@ function registerHandlers(bot) {
 
     const time = ctx.match[2]
 
+    const state = getState(ctx.from.id)
+
+    ctx.reply('Время выбрано')
+
+    if (!state) {
+      setState(ctx.from.id, {
+        step: 'WAIT_NAME',
+
+        data: { date, time },
+      })
+      ctx.reply('Введите ваше имя')
+
+      return
+    }
     setState(ctx.from.id, {
-      step: 'WAIT_NAME',
+      ...state,
+      step: 'WAIT_NAME_ACCESS',
 
       data: { date, time },
     })
-
-    ctx.reply('Введите ваше имя')
+    ctx.reply('Вы желаете изменить Ваше имя? (да / нет)')
   })
 
   bot.on('text', async (ctx) => {
@@ -191,22 +216,68 @@ function registerHandlers(bot) {
           newPortfolio,
       )
     }
+    //
     const state = getState(ctx.from.id)
 
     if (!state) return
 
+    // if (state.existing) {
+    //   if (state.step === 'WAIT_NAME') {
+    //     setState(ctx.from.id, { ...state, step: 'WAIT_NAME_ACCESS' })
+    //     // ctx.reply('Вы желаете изменить Ваше имя? (да / нет)')
+    //   }
+    //   return
+    // }
+    if (state.step === 'WAIT_NAME_ACCESS') {
+      // ctx.reply('Введите ваше имя')
+      if (ctx.message.text === 'да') {
+        setState(ctx.from.id, { ...state, step: 'WAIT_NAME' })
+        //TODO: test mutable
+        // state.step = 'WAIT_NAME'
+        return
+      } else if (ctx.message.text === 'нет') {
+        setState(ctx.from.id, {
+          ...state,
+          step: 'WAIT_PHONE_ACCESS',
+          data: { ...state.data, name: state.existData.name },
+        })
+        ctx.reply('Вы желаете изменить Ваш телефон? (да / нет)')
+        return
+      } else {
+        ctx.reply('Ответ должен быть в формате: да / нет')
+      }
+    }
+    //TODO: добавить проверку экзиста. Если он есть, то спросить изменить ли имя
     if (state.step === 'WAIT_NAME') {
-      state.data.name = ctx.message.text
+      // ctx.reply('Введите ваше имя')
+
+      // state.data.name = ctx.message.text
 
       setState(ctx.from.id, {
         step: 'WAIT_PHONE',
 
-        data: state.data,
+        data: { ...state.data, name: ctx.message.text },
       })
 
       ctx.reply('Введите телефон или Telegram')
 
       return
+    }
+    if (state.step === 'WAIT_PHONE_ACCESS') {
+      if (ctx.message.text === 'да') {
+        setState(ctx.from.id, { ...state, step: 'WAIT_PHONE' })
+        return
+      } else if (ctx.message.text === 'нет') {
+        setState(ctx.from.id, {
+          ...state,
+          step: 'WAIT_PHONE_ACCESS',
+          data: { ...state.data, phone: state.existData.phone },
+        })
+        ctx.reply('Вы желаете изменить Ваш телефон? (да / нет)')
+        return
+      } else {
+        ctx.reply('Ответ должен быть в формате: да / нет')
+      }
     }
 
     if (state.step === 'WAIT_PHONE') {
@@ -214,8 +285,25 @@ function registerHandlers(bot) {
         ctx.reply('Введите верный формат телефона  8 999 888 9999')
         return
       }
-      state.data.phone = ctx.message.text
+      setState(ctx.from.id, {
+        ...state,
+        step: !!state?.hasAnyChanges ? 'EDIT_DATA' : 'CREATE_DATA',
+        data: { ...state.data, phone: ctx.message.text },
+      })
+      //TODO: test this mutable
+      // state.data.phone = ctx.message.text
+
       // try {
+
+      ///
+
+      // }
+      // catch (e) {
+      //   ctx.reply("Этот слот только что заняли. Выберите другой.");
+      // }
+    }
+
+    if (state.step === 'CREATE_DATA') {
       await createBooking({
         ...state.data,
         user_id: ctx.from.id,
@@ -224,30 +312,52 @@ function registerHandlers(bot) {
       ctx.reply(
         `Запись подтверждена
 
-${state.data.date}
-${state.data.time}`,
+        ${state.data.date}
+        ${state.data.time}`,
       )
 
       await ctx.telegram.sendMessage(
         ADMIN_ID,
 
         `<b>Новая запись</b>
-
-👤 ${state.data.name}
-📞 ${state.data.phone}
-
-📅 ${state.data.date}
-⏰ ${state.data.time}`,
+  
+          👤 ${state.data.name}
+          📞 ${state.data.phone}
+  
+          📅 ${state.data.date}
+          ⏰ ${state.data.time}`,
 
         { parse_mode: 'HTML' },
       )
-
-      clearState(ctx.from.id)
-      // }
-      // catch (e) {
-      //   ctx.reply("Этот слот только что заняли. Выберите другой.");
-      // }
     }
+    if (state.step === 'EDIT_DATA') {
+      await updateBooking(ctx.from.id, { ...state.data })
+
+      ctx.reply(
+        `Запись отредактирована
+
+        ${state.data.name}
+        ${state.data.phone}
+        ${state.data.date}
+        ${state.data.time}`,
+      )
+
+      await ctx.telegram.sendMessage(
+        ADMIN_ID,
+
+        `<b>Запись была отредактирована</b>
+  
+          👤 ${state.existData.name} > ${state.data.name}
+          📞 ${state.existData.phone} >${state.data.phone}
+  
+          📅 ${state.existData.date} >${state.data.date}
+          ⏰ ${state.existData.time} >${state.data.time}`,
+
+        { parse_mode: 'HTML' },
+      )
+    }
+
+    clearState(ctx.from.id)
   })
 
   bot.action('admin_edit_portfolio', async (ctx) => {
