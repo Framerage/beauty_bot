@@ -82,7 +82,7 @@ const {
 //TODO: use update booking anywhere
 const { getPortfolio, editPortfolio } = require('../dbHelpers/portfolio')
 const { ADMIN_ID: ENV_ADMIN_ID } = require('../config/config')
-const ADMIN_ID = ENV_ADMIN_ID || 937401113
+const ADMIN_ID = ENV_ADMIN_ID
 const { getLog, dumpDatabase } = require('../utils/logger')
 const adminState = new Map()
 

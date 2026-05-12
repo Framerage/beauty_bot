@@ -18,7 +18,7 @@ const { initDB } = require('./database/db')
 const { registerHandlers } = require('./bot/handlers')
 const { registerAdmin } = require('./bot/admin')
 
-const bot = new Telegraf(BOT_TOKEN || '8690159453:AAFyVSrvlc2cOKCI3ug6Z99akPZ6pMPhs5Q')
+const bot = new Telegraf(BOT_TOKEN)
 
 // bot.command({
 //   command: "start",
