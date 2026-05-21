@@ -232,7 +232,7 @@ function registerHandlers(bot) {
       // ctx.reply('Введите ваше имя')
       if (ctx.message.text === 'да') {
         setState(ctx.from.id, { ...state, step: 'WAIT_NAME' })
-        //TODO: test mutable
+        //TODO: test mutable and crate global state
         // state.step = 'WAIT_NAME'
         return
       } else if (ctx.message.text === 'нет') {
